@@ -1,4 +1,2 @@
-python-telegram-bot==20.3
-postgrest-py
-httpx
 requests
+postgrest-py
