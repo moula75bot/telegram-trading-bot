@@ -3,7 +3,7 @@ services:
     name: trading-bot
     env: python
     buildCommand: ""
-    startCommand: bash start.sh
+    startCommand: python3 bot.py.py
     envVars:
       - key: TELEGRAM_TOKEN
         value: 8022993558:AAHKRheQTEp-UjBzYxn7FiiETp2WDXvUXKI
