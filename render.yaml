@@ -1,15 +1,10 @@
 services:
   - type: web
-    name: trading-bot
+    name: telegram-trading-bot
     env: python
-    buildCommand: ""
-    startCommand: bash start.sh
-    envVars:
-      - key: TELEGRAM_TOKEN
-        value: 8022993558:AAHKRheQTEp-UjBzYxn7FiiETp2WDXvUXKI
-      - key: SUPABASE_URL
-        value: https://nvikogksjvssqphfultt.supabase.co
-      - key: SUPABASE_KEY
-        value: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im52aWtvZ2tzanZzc3FwaGZ1bHR0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTM4MjM3NTMsImV4cCI6MjA2OTM5OTc1M30.Nv1n4OdKpb8MJfdUX9AUQCtuHtrc-NsLNWBZXtjUiho
-      - key: ADMIN_ID
-        value: "8118437300"
+    buildCommand: pip install -r requirements.txt
+    startCommand: python3 bot.py
+    plan: free
+    region: frankfurt
+    branch: main
+    autoDeploy: true
