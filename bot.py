@@ -4,7 +4,7 @@ import json
 from datetime import datetime
 
 # Ton token Telegram
-TOKEN = 'TON_TOKEN_ICI'
+TOKEN = '8022993558:AAHKRheQTEp-UjBzYxn7FiiETp2WDXvUXKI'
 URL = f'https://api.telegram.org/bot{TOKEN}/'
 
 # URL pour récupérer le prix de l'or en EUR
