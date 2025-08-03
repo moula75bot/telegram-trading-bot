@@ -6,7 +6,6 @@ from flask import Flask
 # --- CONFIG ---
 TOKEN = '8022993558:AAHKRheQTEp-UjBzYxn7FiiETp2WDXvUXKI'  # ← remplace par ton token Telegram
 URL = f'https://api.telegram.org/bot{TOKEN}/'
-GOLD_API = 'https://api.metals.live/v1/spot'
 
 alertes = {}
 
@@ -21,21 +20,21 @@ def home():
     <body>
     <h1>Bienvenue sur le Bot Or 🪙</h1>
     <p>Ce bot Telegram vous aide à suivre le prix de l'or et à recevoir des alertes personnalisées.</p>
-    <p><a href="https://t.me/TON_BOT_USERNAME">Clique ici pour lancer le bot Telegram</a></p>
+    <p><a href="https://t.me/lm91tzoobot">Clique ici pour lancer le bot Telegram</a></p>
     <p>Merci de votre visite !</p>
     </body>
     </html>
     '''
 
-# --- Fonction pour récupérer le prix de l'or ---
+# --- Nouvelle fonction pour récupérer le prix de l'or ---
 def get_gold_price():
     try:
-        r = requests.get(GOLD_API)
+        url = 'https://data-asg.goldprice.org/dbXRates/USD'
+        r = requests.get(url)
         data = r.json()
-        for item in data:
-            if item[0] == 'gold':
-                return float(item[1])
-    except:
+        return float(data["items"][0]["xauPrice"])
+    except Exception as e:
+        print("Erreur get_gold_price:", e)
         return None
 
 # --- Fonction pour envoyer un message Telegram ---
