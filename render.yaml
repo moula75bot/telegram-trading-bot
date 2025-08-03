@@ -1,7 +1,6 @@
 services:
   - type: web
-    name: gold-alert-bot
+    name: bot-or
     env: python
-    startCommand: bash start.sh
+    startCommand: python3 bot.py
     plan: free
-    
