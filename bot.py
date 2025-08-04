@@ -1,83 +1,81 @@
-import time
-import threading
 import requests
-from flask import Flask
+import time
+import numpy as np
+import datetime
+from config import TELEGRAM_TOKEN, TELEGRAM_CHAT_ID, BINANCE_SYMBOL, CAPITAL
 
-# --- CONFIG ---
-TOKEN = '8022993558:AAHKRheQTEp-UjBzYxn7FiiETp2WDXvUXKI'  # ← remplace par ton token Telegram
-URL = f'https://api.telegram.org/bot{TOKEN}/'
+# === CONFIG ===
+RSI_PERIOD = 14
+INTERVAL = "5m"
+API_BASE = "https://api.binance.com"
+SYMBOL = BINANCE_SYMBOL
+capital = CAPITAL
+position = None  # 'LONG' or None
+entry_price = 0
 
-alertes = {}
+def get_price_data():
+    url = f"{API_BASE}/api/v3/klines?symbol={SYMBOL}&interval={INTERVAL}&limit=100"
+    response = requests.get(url)
+    data = response.json()
+    closes = [float(candle[4]) for candle in data]
+    return closes
 
-# --- Serveur Flask pour le site web ---
-app = Flask(__name__)
+def calculate_rsi(closes):
+    deltas = np.diff(closes)
+    seed = deltas[:RSI_PERIOD]
+    up = seed[seed >= 0].sum() / RSI_PERIOD
+    down = -seed[seed < 0].sum() / RSI_PERIOD
+    rs = up / down if down != 0 else 0
+    rsi = [100 - (100 / (1 + rs))]
 
-@app.route('/')
-def home():
-    return '''
-    <html>
-    <head><title>Bot Or - Alertes Gold</title></head>
-    <body>
-    <h1>Bienvenue sur le Bot Or 🪙</h1>
-    <p>Ce bot Telegram vous aide à suivre le prix de l'or et à recevoir des alertes personnalisées.</p>
-    <p><a href="https://t.me/lm91tzoobot">Clique ici pour lancer le bot Telegram</a></p>
-    <p>Merci de votre visite !</p>
-    </body>
-    </html>
-    '''
+    for delta in deltas[RSI_PERIOD:]:
+        gain = max(delta, 0)
+        loss = -min(delta, 0)
+        up = (up * (RSI_PERIOD - 1) + gain) / RSI_PERIOD
+        down = (down * (RSI_PERIOD - 1) + loss) / RSI_PERIOD
+        rs = up / down if down != 0 else 0
+        rsi.append(100 - (100 / (1 + rs)))
 
-# --- Nouvelle fonction pour récupérer le prix de l'or ---
-def get_gold_price():
-    try:
-        url = 'https://data-asg.goldprice.org/dbXRates/USD'
-        r = requests.get(url)
-        data = r.json()
-        return float(data["items"][0]["xauPrice"])
-    except Exception as e:
-        print("Erreur get_gold_price:", e)
-        return None
+    return rsi[-1]
 
-# --- Fonction pour envoyer un message Telegram ---
-def send(chat_id, text):
-    requests.post(URL + 'sendMessage', data={'chat_id': chat_id, 'text': text})
+def send_telegram(msg):
+    url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage"
+    data = {"chat_id": TELEGRAM_CHAT_ID, "text": msg}
+    requests.post(url, data=data)
 
-# --- Boucle principale du bot Telegram ---
-def bot_loop():
-    offset = None
+def log(msg):
+    print(msg)
+    send_telegram(msg)
+    with open("trades.log", "a") as f:
+        f.write(f"{datetime.datetime.now()} - {msg}\n")
+
+def main_loop():
+    global position, entry_price, capital
+
     while True:
-        updates = requests.get(URL + 'getUpdates', params={'offset': offset}).json()
-        if "result" in updates:
-            for update in updates["result"]:
-                offset = update["update_id"] + 1
-                chat_id = update["message"]["chat"]["id"]
-                text = update["message"].get("text", "")
+        try:
+            closes = get_price_data()
+            current_price = closes[-1]
+            rsi = calculate_rsi(closes)
+            log(f"RSI: {rsi:.2f} | Price: {current_price:.2f} | Capital: {capital:.2f} | Position: {position}")
 
-                if text == "/start":
-                    send(chat_id, "Bienvenue 🪙\nUtilise /gold pour voir le prix de l’or ou /alert 2800 pour recevoir une alerte.")
-                elif text == "/gold":
-                    price = get_gold_price()
-                    if price:
-                        send(chat_id, f"💰 L’or vaut actuellement {price:.2f} $/oz")
-                    else:
-                        send(chat_id, "Erreur de récupération du prix.")
-                elif text.startswith("/alert"):
-                    try:
-                        seuil = float(text.split()[1])
-                        alertes[chat_id] = seuil
-                        send(chat_id, f"🔔 Tu seras alerté quand l’or dépassera {seuil} $/oz")
-                    except:
-                        send(chat_id, "Utilise : /alert 2800")
+            if rsi < 30 and position is None:
+                position = "LONG"
+                entry_price = current_price
+                log(f"📈 Achat simulé à {entry_price:.2f}")
 
-        # Vérifie les alertes toutes les 10 sec
-        price = get_gold_price()
-        if price:
-            for chat_id, seuil in list(alertes.items()):
-                if price >= seuil:
-                    send(chat_id, f"🚨 L’or a atteint {price:.2f} $/oz (seuil : {seuil})")
-                    alertes.pop(chat_id)
-        time.sleep(10)
+            elif rsi > 70 and position == "LONG":
+                profit_pct = (current_price - entry_price) / entry_price
+                gain = capital * profit_pct
+                capital += gain
+                log(f"📉 Vente simulée à {current_price:.2f} | Gain: {gain:.2f} €")
+                position = None
+                entry_price = 0
 
-# --- Lancer bot et serveur web en parallèle ---
+        except Exception as e:
+            log(f"Erreur : {e}")
+
+        time.sleep(300)  # attend 5 min
+
 if __name__ == "__main__":
-    threading.Thread(target=bot_loop).start()
-    app.run(host='0.0.0.0', port=10000)
+    main_loop()
