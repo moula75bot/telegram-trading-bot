@@ -1,7 +1,8 @@
 services:
   - type: web
-    name: trading-bot
+    name: trading-bot-rsi
     env: python
     buildCommand: ""
-    startCommand: bash start.sh
-    autoDeploy: false
+    startCommand: python3 bot.py
+    plan: free
+    autoDeploy: true
