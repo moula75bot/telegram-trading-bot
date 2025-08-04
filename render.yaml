@@ -1,6 +1,7 @@
 services:
   - type: web
-    name: bot-or
+    name: trading-bot
     env: python
-    startCommand: python3 bot.py
-    plan: free
+    buildCommand: ""
+    startCommand: bash start.sh
+    autoDeploy: false
