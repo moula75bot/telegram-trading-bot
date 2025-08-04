@@ -1,16 +1,17 @@
-import requests
+import threading
 import time
+import requests
 import numpy as np
 import datetime
 from config import TELEGRAM_TOKEN, TELEGRAM_CHAT_ID, BINANCE_SYMBOL, CAPITAL
 
-# === CONFIG ===
+# CONFIG
 RSI_PERIOD = 14
 INTERVAL = "5m"
 API_BASE = "https://api.binance.com"
 SYMBOL = BINANCE_SYMBOL
 capital = CAPITAL
-position = None  # 'LONG' or None
+position = None
 entry_price = 0
 
 def get_price_data():
@@ -49,8 +50,8 @@ def log(msg):
     with open("trades.log", "a") as f:
         f.write(f"{datetime.datetime.now()} - {msg}\n")
 
-def main_loop():
-    global position, entry_price, capital
+def trading_loop():
+    global capital, position, entry_price
 
     while True:
         try:
@@ -75,7 +76,20 @@ def main_loop():
         except Exception as e:
             log(f"Erreur : {e}")
 
-        time.sleep(300)  # attend 5 min
+        time.sleep(300)  # 5 min
+
+# Démarrer le trading dans un thread
+t = threading.Thread(target=trading_loop)
+t.daemon = True
+t.start()
+
+# === FLASK WEB SERVER (nécessaire pour Render gratuit) ===
+from flask import Flask
+app = Flask(__name__)
+
+@app.route('/')
+def home():
+    return "🤖 Bot de trading actif et connecté à Telegram ✅"
 
 if __name__ == "__main__":
-    main_loop()
+    app.run(host="0.0.0.0", port=10000)
